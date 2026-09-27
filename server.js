@@ -18,35 +18,37 @@ const auth = new google.auth.GoogleAuth({
 const drive = google.drive({ version: 'v3', auth });
 
 // Rota para buscar subpastas (compatível com o seu index.html)
+// Rota para buscar subpastas
 app.get('/api/folders/:folderId', async (req, res) => {
-    try {
-        const folderId = req.params.folderId;
-        const response = await drive.files.list({
-            q: `'${folderId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed=false`,
-            fields: 'files(id, name)',
-            orderBy: 'name',
-        });
-        res.json(response.data.files);
-    } catch (error) {
-        console.error("Erro ao buscar pastas:", error);
-        res.status(500).json({ error: 'Erro ao carregar pastas.' });
-    }
+  try {
+    const folderId = req.params.folderId;
+    const response = await drive.files.list({
+      q: `'${folderId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed=false`,
+      fields: 'files(id, name)',
+      orderBy: 'name',
+    });
+    res.json(response.data.files);
+  } catch (error) {
+    console.error("Erro ao buscar pastas:", error);
+    // Devolve o erro exato do Google para vermos na tela
+    res.status(500).json({ error: error.message, stack: error.stack });
+  }
 });
 
-// Rota para buscar músicas (compatível com o seu index.html)
+// Rota para buscar músicas
 app.get('/api/tracks/:folderId', async (req, res) => {
-    try {
-        const folderId = req.params.folderId;
-        const response = await drive.files.list({
-            q: `'${folderId}' in parents and mimeType contains 'audio/' and trashed=false`,
-            fields: 'files(id, name)',
-            orderBy: 'name',
-        });
-        res.json(response.data.files);
-    } catch (error) {
-        console.error("Erro ao buscar músicas:", error);
-        res.status(500).json({ error: 'Erro ao carregar músicas.' });
-    }
+  try {
+    const folderId = req.params.folderId;
+    const response = await drive.files.list({
+      q: `'${folderId}' in parents and mimeType contains 'audio/' and trashed=false`,
+      fields: 'files(id, name)',
+      orderBy: 'name',
+    });
+    res.json(response.data.files);
+  } catch (error) {
+    console.error("Erro ao buscar músicas:", error);
+    res.status(500).json({ error: error.message, stack: error.stack });
+  }
 });
 
 // Rota de Streaming de Áudio
