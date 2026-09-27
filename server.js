@@ -5,17 +5,24 @@ const cors = require('cors');
 const app = express();
 app.use(cors());
 
-// Tratamento blindado para a chave privada (corrige quebras de linha automaticamente)
-let rawPrivateKey = process.env.GOOGLE_PRIVATE_KEY || '';
-let formattedKey = rawPrivateKey;
+// Tratamento blindado para recuperar a chave privada de qualquer formato corrompido pelo Render
+let rawKey = process.env.GOOGLE_PRIVATE_KEY || '';
 
-if (rawPrivateKey.includes('\\n')) {
-  formattedKey = rawPrivateKey.replace(/\\n/g, '\n');
-} else if (rawPrivateKey.includes(' ') && !rawPrivateKey.includes('\n')) {
-  // Caso o Render tenha transformado os \n em espaços por engano
-  formattedKey = rawPrivateKey
-    .replace('-----BEGIN PRIVATE KEY----- ', '-----BEGIN PRIVATE KEY-----\n')
-    .replace(' -----END PRIVATE KEY-----', '\n-----END PRIVATE KEY-----');
+// Limpa aspas extras se houver e conserta quebras de linha (seja \n literal ou espaços)
+let formattedKey = rawKey.trim().replace(/^["'](.+)["']$/, '$1');
+
+if (formattedKey.includes('\\n')) {
+  formattedKey = formattedKey.replace(/\\n/g, '\n');
+} else if (!formattedKey.includes('\n')) {
+  // Se o Render transformou as quebras em espaços, reconstrói o formato PEM do zero
+  const body = formattedKey
+    .replace('-----BEGIN PRIVATE KEY-----', '')
+    .replace('-----END PRIVATE KEY-----', '')
+    .replace(/\s+/g, ''); // Remove todos os espaços do miolo em base64
+
+  // Recria o bloco padrão com quebras a cada 64 caracteres
+  const chunkedBody = body.match(/.{1,64}/g).join('\n');
+  formattedKey = `-----BEGIN PRIVATE KEY-----\n${chunkedBody}\n-----END PRIVATE KEY-----\n`;
 }
 
 const auth = new google.auth.GoogleAuth({
