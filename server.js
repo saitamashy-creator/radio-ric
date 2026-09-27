@@ -5,14 +5,26 @@ const cors = require('cors');
 const app = express();
 app.use(cors());
 
-// Autenticação via Conta de Serviço com suporte a chaves criptográficas
+// Tratamento blindado para a chave privada (corrige quebras de linha automaticamente)
+let rawPrivateKey = process.env.GOOGLE_PRIVATE_KEY || '';
+let formattedKey = rawPrivateKey;
+
+if (rawPrivateKey.includes('\\n')) {
+  formattedKey = rawPrivateKey.replace(/\\n/g, '\n');
+} else if (rawPrivateKey.includes(' ') && !rawPrivateKey.includes('\n')) {
+  // Caso o Render tenha transformado os \n em espaços por engano
+  formattedKey = rawPrivateKey
+    .replace('-----BEGIN PRIVATE KEY----- ', '-----BEGIN PRIVATE KEY-----\n')
+    .replace(' -----END PRIVATE KEY-----', '\n-----END PRIVATE KEY-----');
+}
+
 const auth = new google.auth.GoogleAuth({
-    credentials: {
-        client_email: process.env.GOOGLE_CLIENT_EMAIL,
-        private_key: process.env.GOOGLE_PRIVATE_KEY ? process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n') : undefined,
-        project_id: process.env.GOOGLE_PROJECT_ID,
-    },
-    scopes: ['https://www.googleapis.com/auth/drive.readonly'],
+  credentials: {
+    client_email: process.env.GOOGLE_CLIENT_EMAIL,
+    private_key: formattedKey,
+    project_id: process.env.GOOGLE_PROJECT_ID,
+  },
+  scopes: ['https://www.googleapis.com/auth/drive.readonly'],
 });
 
 const drive = google.drive({ version: 'v3', auth });
